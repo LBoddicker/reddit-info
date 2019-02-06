@@ -4,26 +4,56 @@ import praw
 import json
 import os
 import requests
+import RedditSQL
+
+## CURRENT QUESTIONS
+# We need 
 
 class InfoFetch():
     """
     This will return a list of comments from a subreddit, user, or submission
     """
 
-    def __init__(self, redditDict):
-        self.reddit = praw.Reddit(client_id=redditDict['client_id'],
-                                   client_secret=redditDict['client_secret'],
-                                   password=redditDict['password'],
-                                   user_agent=redditDict['user_agent'],
-                                   username=redditDict['username'])
+    def __init__(self, redditInstance, sqlConnection):
+        self.redditInstance = redditInstance
+        self.sqlConnection = sqlConnection
+
+    def getCommentsFromSubreddit(self, inSubreddit, submissionLimit = 100):
+        # Check to see if we already have the subreddit
+        ## If we do not we make a subreddit entry in the database
+        ## We gather a list of submissions
+        ## We call getSubmissionComments()
+
+        if(not self.sqlConnection.existsInSubredditTable(inSubreddit)):
+            
+
+            try:
+                self.sqlConnection.addSubreddit(inSubreddit) 
+                subreddit = self.redditInstance.subreddit(inSubreddit)
+                subList = [submission.id for submission in subreddit.top(limit=submissionLimit)]
+                for i in subList:
+                    self.getSubmissionComments(i, 1)
+            except:
+                print('Something went wrong in getCommentsFromSubreddit()')
+
+    def getSubmissionComments(self, inSubmission, subredditID):
+        #We get all the comment ideas
+        #We check to see if they already exist
+        ## If they do not already exist we add them
+        pass
+
+
 
     def getSubmission(self, inSubmission, inLimit=100):
+        '''
+        This method takes a subreddit and returns all of that subreddit's comments
+        '''
         if(not os.path.exists('{0}.json'.format(inSubmission))):
             retList = []
             commentDict = {}
 
             subreddit = self.reddit.subreddit(inSubmission)
-            subList = [submission.id for submission in subreddit.top(limit=inLimit)] #make a list of all the subreddit ids
+            subList = [submission.id for submission in subreddit.top(limit=inLimit)] #make a list of all the submission ids
             
             print(subList)
 
