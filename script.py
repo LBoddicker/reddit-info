@@ -7,6 +7,10 @@ from commentParse import ParseComments
 from analyzeComments import *
 import sys
 
+# New rules/ideas
+## the will deal with the pulling from SQL and storing to SQL here -- the other modules/classes will not be responsible for that
+
+
 
 def setupConfig():
     myConfigDict = {}
@@ -31,6 +35,8 @@ def setupConfig():
 
     return myConfigDict
 
+def 
+
 def main():
     tempDict = setupConfig()
     redditInstance = praw.Reddit(client_id=tempDict['client_id'],
@@ -38,6 +44,7 @@ def main():
                                    password=tempDict['password'],
                                    user_agent=tempDict['user_agent'],
                                    username=tempDict['username'])
+
     sqlConnection = RedditSQL.RedditSQL('myDB')
     myInst = commentFetch.InfoFetch(redditInstance, sqlConnection)
     listOfSubs = ['announcements', 'funny', 'AskReddit', 'todayilearned', 'science', 'worldnews', 'pics', 'IAmA', 'gaming', 'videos',
@@ -50,6 +57,9 @@ def main():
                   'trees','Android','lifehacks','me_irl','relationships','Games','nba','programming','tattoos','NatureIsFuckingLit',
                   'Whatcouldgowrong','CrappyDesign','Dankmemes','nsfw','cringepics','4chan','soccer','comics','sex','pokemon',
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
+
+
+    
     tempList = []
     for i in listOfSubs:
         myInst.getCommentsFromSubreddit(i, submissionLimit=100)

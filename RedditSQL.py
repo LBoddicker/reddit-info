@@ -57,12 +57,12 @@ class RedditSQL:
         if(not self.doesTableExist('comments')):
             sql_command = '''CREATE TABLE comments 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            reddit_id TEXT,
-                            subreddit_id INTEGER,
-                            submission_id INTEGER,
+                            subredditName TEXT,
+                            submission_id TEXT,
+                            comment_id TEXT,
                             body TEXT,
-                            parsed_body TEXT,
-                            sentiment TEXT);
+                            pared_body TEXT,
+                            sentiment TEXT;
                             '''
             self.crsr.execute(sql_command)
 
@@ -98,17 +98,37 @@ class RedditSQL:
             self.crsr.execute(sql_command)
             self.connection.commit()
 
-    def addSubmission(self):
-        pass
+    def addCommentsFromSubmission(self, subredditName, submissionID, commentID, commentBody):
+        '''
+        subreddit - string
+        submissionID - string
+        commentID - list of strings
+        commentBody - list of strings
+        Takes many commentIDs and commentBodys from a submisison and adds them to SQL database
 
-    def addComment(self):
-        pass
+        commentID and commentBody must be the same length
+        '''
+        if(len(commentID) != len(commentBody)):
+            raise Exception('FUNC: addCommentsFromSubmission -- commentID and commentBody not the same length!')
 
-    def doesSubredditExist(self):
-        pass
+        for i in range(len(commentID)):
+            self.addComment(subredditName, submissionID, commentID[i], commentBody[i])
 
-    def doesSubmissionExist(self):
-        pass
+
+    def addComment(self, subredditName, submissionID, commentID, commentBody):
+        '''
+        subreddit - string
+        submissionID - string
+        commentID - string
+        commentBody - string
+        store a single comment in the SQL database
+        '''
+        sql_command = '''INSERT INTO comments
+                         (subredditName, submission_id, comment_id, body)
+                         VALUES ("{0}", "{1}", "{2}", "{3}").
+                         '''.format(subredditName, submissionID, commentID, commentBody)
+        self.crsr.execute(sql_command)
+        self.connection.commit()
 
     def closeDB(self):
         '''

@@ -18,4 +18,5 @@ def getTotSentiment(inSub):
             for i in v:
                 totNum += 1
                 totSentiment += returnSentiment(i)
+                #print(i, returnSentiment(i))
     return totSentiment/totNum
