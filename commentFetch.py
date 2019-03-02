@@ -21,10 +21,15 @@ class InfoFetch():
         submissionLimit - int
         will fetch comments for all the subreddits in the list
 
-        return a dictionary with the subreddit as key and a dictionary with the submission/comment data as value
+        return a list of tuples (subreddit_name, submission_reddit_id, comment_reddit_id, comment_body)
+
+        Notes: maybe don't use this so much as it may use a lot of memory
         '''
+        retList = []
         for i in inSubredditList:
-            self.getCommentsFromSubreddit(i, submissionLimit)
+            retList += self.getCommentsFromSubreddit(i, submissionLimit)
+
+        return retList
 
 
     def getCommentsFromSubreddit(self, inSubreddit, submissionLimit = 100):
@@ -32,20 +37,27 @@ class InfoFetch():
         inSubreddit - string
         submissionLimit - int
 
-        return a dictionary with the submission_id as key and value as a list of tupes (comment_body, comment_id)
+        return a list of tuples (subreddit_name, submission_reddit_id, comment_reddit_id, comment_body)
 
         will fetch from a subreddit all the comments of the top posts.
         '''
 
-        if(not self.sqlConnection.existsInSubredditTable(inSubreddit)):
+        if(not self.sqlConnection.doesSubredditExist(inSubreddit)):
+            retList = []
+            tempList = []
             try:
                 self.sqlConnection.addSubreddit(inSubreddit) 
                 subreddit = self.redditInstance.subreddit(inSubreddit)
                 subList = [submission.id for submission in subreddit.top(limit=submissionLimit)]
                 for i in subList:
-                    self.getSubmissionComments(inSubreddit, i)
+                    tempList += self.getSubmissionComments(i)
             except:
                 print('Something went wrong in getCommentsFromSubreddit()')
+
+            for i in tempList:
+                retList.append((inSubreddit,) + i)
+
+            return retList
     
 
     def getSubmissionComments(self, submissionID):
@@ -53,11 +65,10 @@ class InfoFetch():
         subredditName - string
         submisisonID - string
 
-        return a list of tuples (comment_body, comment_id)
+        return a list of tuples (submission_reddit_id, comment_reddit_id, comment_body)
 
         will fetch and store all the comments from a specified post.
         '''
-
         tempStr = 'https://api.pushshift.io/reddit/submission/comment_ids/' + submissionID
         r = requests.get(tempStr)
         j = r.json() 
@@ -65,33 +76,30 @@ class InfoFetch():
         time.sleep(.3)
 
         if len(commentIds) > 1000:
-            tempList = []
+            retList = []
             loops = len(commentIds) // 1000
             for i in range(loops):
                 tempStr = 'https://api.pushshift.io/reddit/comment/search?ids=' + ','.join(commentIds[1000*i:1000*(i+1)])
                 r = requests.get(tempStr)
                 j = r.json()
-                zipList = list(zip( [i['body'] for i in j['data']], commentIds[1000*i:1000*(i+1)] ))
-                tempList += zipList
+                zipList = list(zip([submissionID for i in range(1000)], commentIds[1000*i:1000*(i+1)], [i['body'] for i in j['data']]))
+                retList += zipList
                 time.sleep(.3)
             tempStr = 'https://api.pushshift.io/reddit/comment/search?ids=' + ','.join(commentIds[1000*(i+1):len(commentIds)])
             r = requests.get(tempStr)
             j = r.json()
-            zipList = list(zip( [i['body'] for i in j['data']], commentIds[1000*(i+1):len(commentIds)] ))
-            tempList += zipList
+            zipList = list(zip([submissionID for i in range(len(commentIds%1000))], commentIds[1000*(i+1):len(commentIds)], [i['body'] for i in j['data']]))
+            retList += zipList
             time.sleep(.3)
         else:
             tempStr = 'https://api.pushshift.io/reddit/comment/search?ids=' + ','.join(commentIds)
             r = requests.get(tempStr)
             j = r.json()
-            zipList = list(zip([i['body'] for i in j['data']], commentIds))
-            tempList += zipList
+            zipList = list(zip([submissionID for i in range(len(commentIds))], commentIds, [i['body'] for i in j['data']]))
+            retList += zipList
             time.sleep(.3)
 
-        return tempList
-
-        
-        
+        return retList
 
 if __name__ == '__main__':
     print('main was called')

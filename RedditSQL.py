@@ -47,9 +47,8 @@ class RedditSQL:
         if(not self.doesTableExist('submissions')):
             sql_command = '''CREATE TABLE submissions 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            reddit_id TEXT,
-                            subreddit_id INTEGER,
-                            name TEXT,
+                            subreddit_sql_id INTEGER,
+                            submission_reddit_id TEXT,
                             sentiment TEXT);
                             '''
             self.crsr.execute(sql_command)
@@ -57,9 +56,9 @@ class RedditSQL:
         if(not self.doesTableExist('comments')):
             sql_command = '''CREATE TABLE comments 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            subredditName TEXT,
-                            submission_id TEXT,
-                            comment_id TEXT,
+                            subreddit_sql_id INTEGER,
+                            submission_sql_id INTEGER,
+                            comment_reddit_id TEXT,
                             body TEXT,
                             pared_body TEXT,
                             sentiment TEXT;
@@ -74,23 +73,9 @@ class RedditSQL:
         self.crsr.execute(sql_command)
         for row in self.crsr:
             print(row)
-            
-    def existsInSubredditTable(self, subredditName):
-        sql_command = '''SELECT COUNT(*) 
-                         FROM subreddits
-                         WHERE name = "{0}"
-                         '''.format(subredditName)
-        self.crsr.execute(sql_command)
-        data = self.crsr.fetchone()[0]
-        if(data == 0):
-            print('it does not exists')
-            return False
-        else:
-            print('it exists')
-            return True
 
     def addSubreddit(self, subredditName):
-        if(not self.existsInSubredditTable(subredditName)):
+        if(not self.doesSubredditExist(subredditName)):
             sql_command = '''INSERT INTO subreddits
                             (name)
                             VALUES ("{0}");
@@ -125,10 +110,169 @@ class RedditSQL:
         '''
         sql_command = '''INSERT INTO comments
                          (subredditName, submission_id, comment_id, body)
-                         VALUES ("{0}", "{1}", "{2}", "{3}").
+                         VALUES ("{0}", "{1}", "{2}", "{3}")
                          '''.format(subredditName, submissionID, commentID, commentBody)
         self.crsr.execute(sql_command)
         self.connection.commit()
+
+
+    def doesSubredditExist(self, subredditName):
+        '''
+        subredditName - string
+        output - True/False
+
+        returns true if subreddit exists in SQL database
+        '''
+        sql_command = '''SELECT COUNT(*) 
+                        FROM subreddits
+                        WHERE name = "{0}"
+                        '''.format(subredditName)
+        self.crsr.execute(sql_command)
+        data = self.crsr.fetchone()[0]
+        if(data == 0):
+            return False
+        else:
+            return True
+
+    def createSubreddit(self, subredditName):
+        '''
+        subredditName - string
+        output - SQL ID
+
+        will create a subreddit and return its SQL ID
+        '''
+        sql_command = '''INSERT INTO subreddits
+                         (name)
+                         VALUES ("{0}")
+                         '''.format(subredditName)
+        self.crsr.execute(sql_command)
+        self.connection.commit()
+
+        return self.getSubredditSQLID(subredditName)
+
+    def getSubredditSQLID(self, subredditName):
+        '''
+        subredditName - string
+        output - SQL ID
+
+        will return the SQL ID
+        '''
+        sql_command = '''
+                      SELECT id
+                      FROM subreddits
+                      WHERE name = "{0}"
+                      '''.format(subredditName)
+        self.crsr.execute(sql_command)
+        return self.crsr.fetchone()[0]
+
+
+    def doesSubmissionExist(self, submissionRedditID):
+        '''
+        submissionRedditID - string
+        output - True/False
+
+        returns true if submission exists in SQL database
+        '''
+        sql_command = '''SELECT COUNT(*) 
+                        FROM submissions
+                        WHERE submission_reddit_id = "{0}"
+                        '''.format(submissionRedditID)
+        self.crsr.execute(sql_command)
+        data = self.crsr.fetchone()[0]
+        if(data == 0):
+            return False
+        else:
+            return True
+
+    def createSubmission(self, subredditSQLID, submissionRedditID):
+        '''
+        subredditSQLID - int
+        submissionRedditID - string
+        output - SQL ID
+
+        will create a submission and return its SQL ID
+        '''
+        sql_command = '''INSERT INTO submissions
+                         (subreddit_sql_id, submission_reddit_id)
+                         VALUES ({0}, "{1}")
+                         '''.format(subredditSQLID, submissionRedditID)
+        self.crsr.execute(sql_command)
+        self.connection.commit()
+
+        return self.getSubmissionSQLID(submissionRedditID)
+
+    def getSubmissionSQLID(self, submissionRedditID):
+        '''
+        submissionRedditID - string
+        output - SQL ID
+
+        will return the SQL ID
+        '''
+        sql_command = '''
+                      SELECT id
+                      FROM submissions
+                      WHERE submission_reddit_id = "{0}"
+                      '''.format(submissionRedditID)
+        self.crsr.execute(sql_command)
+        return self.crsr.fetchone()[0]
+
+
+    def doesCommentExist(self, commentRedditID):
+        '''
+        commentRedditID - string
+        output - True/False
+
+        returns true if submission exists in SQL database
+        '''
+        sql_command = '''SELECT COUNT(*) 
+                        FROM comments
+                        WHERE comment_reddit_id = "{0}"
+                        '''.format(commentRedditID)
+        self.crsr.execute(sql_command)
+        data = self.crsr.fetchone()[0]
+        if(data == 0):
+            return False
+        else:
+            return True
+
+    def createComment(self, subredditSQLID, submissionSQLID, commentRedditID, commentBody):
+        '''
+        subredditSQLID - int
+        submissionSQLID - int
+        commentRedditID - string
+        commentBody - string
+        output - SQL ID
+
+        will create a submission and return its SQL ID
+        '''
+        sql_command = '''INSERT INTO submissions
+                            body TEXT,
+                         (subreddit_sql_id, submission_sql_id, comment_reddit_id, body)
+                         VALUES ({0}, {1}, "{2}", "{3}")
+                         '''.format(subredditSQLID, submissionSQLID, commentRedditID, commentBody)
+        self.crsr.execute(sql_command)
+        self.connection.commit()
+
+        return self.getSubmissionSQLID(commentRedditID)
+
+    def getCommentSQLID(self, commentRedditID):
+        '''
+        commentRedditID - string
+        output - SQL ID
+
+        will return the SQL ID
+        '''
+        sql_command = '''
+                      SELECT id
+                      FROM comments
+                      WHERE comment_reddit_id  = "{0}"
+                      '''.format(commentRedditID)
+        self.crsr.execute(sql_command)
+        return self.crsr.fetchone()[0]
+
+
+
+
 
     def closeDB(self):
         '''
@@ -143,7 +287,7 @@ if __name__ == '__main__':
     myObj.addSubreddit('programming')
     myObj.addSubreddit('pics')
     myObj.getSubredditTable()
-    myObj.existsInSubredditTable('pics')
-    myObj.existsInSubredditTable('blah')
+    myObj.doesSubredditExist('pics')
+    myObj.doesSubredditExist('blah')
     myObj.closeDB()
 

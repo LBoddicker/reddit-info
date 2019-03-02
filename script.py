@@ -10,7 +10,7 @@ import sys
 # New rules/ideas
 ## the will deal with the pulling from SQL and storing to SQL here -- the other modules/classes will not be responsible for that
 
-
+DB_NAME = 'reddit_database'
 
 def setupConfig():
     myConfigDict = {}
@@ -35,7 +35,51 @@ def setupConfig():
 
     return myConfigDict
 
-def 
+
+def getAndStoreSubreddits(commentFetcher, sqlDB, subredditList, submissionLimit = 100):
+    '''
+    commentFetcher - object of class InfoFetch
+    sqlDB - object of class RedditSQL
+    subredditList - list of strings
+    submisisonLimit - int
+
+    This class will grab all comments from the top 'submissionLimit' number of posts
+    from each subreddit and store them in the SQL database.
+
+    Notes: If a subreddit is already stored in the sql database it will not check to see
+    if the comments are also there. It will assume the comments are there.
+    '''
+    for subredditName in subredditList:
+        getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit)
+        
+
+def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit = 100):
+    '''
+    commentFetcher - object of class InfoFetch
+    sqlDB - object of class RedditSQL
+    subredditName - string
+    submisisonLimit - int
+
+    This class will grab all comments from the top 'submissionLimit' number of posts
+    and store them in the SQL database.
+
+    Notes: If a subreddit is already stored in the sql database it will not check to see
+    if the comments are also there. It will assume the comments are there.
+    '''
+    if(not sqlDB.doesSubredditExist(subredditName)):
+        tempList = commentFetcher.getCommentsFromSubreddit(subredditName, submissionLimit)
+        subredditSQLID = sqlDB.createSubreddit(subredditName)
+
+        for commentTuple in tempList:
+            if(not sqlDB.doesCommentExist(commentTuple[2])):
+                if(not sqlDB.doesSubmissionExist(commentTuple[1])):
+                    submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])  
+                else:
+                    submissionSQLID = sqlDB.getSubmissionSQLID(commentTuple[1])
+                sqlDB.createComment(subredditSQLID, submissionSQLID, commentTuple[2], commentTuple[3])
+
+
+    
 
 def main():
     tempDict = setupConfig()
@@ -45,8 +89,10 @@ def main():
                                    user_agent=tempDict['user_agent'],
                                    username=tempDict['username'])
 
-    sqlConnection = RedditSQL.RedditSQL('myDB')
-    myInst = commentFetch.InfoFetch(redditInstance, sqlConnection)
+    sqlConnection = RedditSQL.RedditSQL(DB_NAME) #create SQL interface object
+
+    myInst = commentFetch.InfoFetch(redditInstance, sqlConnection) #create comment grabber object
+
     listOfSubs = ['announcements', 'funny', 'AskReddit', 'todayilearned', 'science', 'worldnews', 'pics', 'IAmA', 'gaming', 'videos',
                   'movies', 'aww', 'Music', 'blog','gifs','news','explainlikeimfive','askscience','EarthPorn','books',
                   'television','mildlyinteresting','LifeProTips','Showerthoughts','space','DIY','Jokes','gadgets','nottheonion','sports',
@@ -57,14 +103,11 @@ def main():
                   'trees','Android','lifehacks','me_irl','relationships','Games','nba','programming','tattoos','NatureIsFuckingLit',
                   'Whatcouldgowrong','CrappyDesign','Dankmemes','nsfw','cringepics','4chan','soccer','comics','sex','pokemon',
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
-
-
     
-    tempList = []
-    for i in listOfSubs:
-        myInst.getCommentsFromSubreddit(i, submissionLimit=100)
-    sqlConnection.getSubredditTable()
+    
+    getAndStoreSubreddits(myInst, sqlConnection, listOfSubs, 10)
 
+    sqlConnection.getSubredditTable()
 
 if __name__ == '__main__':
     print(sys.argv)
