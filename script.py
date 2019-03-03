@@ -3,8 +3,8 @@ import json
 import commentFetch
 import RedditSQL
 import praw
-from commentParse import ParseComments
-from analyzeComments import *
+#from commentParse import ParseComments
+#from analyzeComments import *
 import sys
 
 # New rules/ideas
@@ -51,7 +51,7 @@ def getAndStoreSubreddits(commentFetcher, sqlDB, subredditList, submissionLimit 
     '''
     for subredditName in subredditList:
         getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit)
-        
+
 
 def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit = 100):
     '''
@@ -66,11 +66,16 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
     Notes: If a subreddit is already stored in the sql database it will not check to see
     if the comments are also there. It will assume the comments are there.
     '''
+    print('Started subreddit: ', subredditName)
     if(not sqlDB.doesSubredditExist(subredditName)):
         tempList = commentFetcher.getCommentsFromSubreddit(subredditName, submissionLimit)
         subredditSQLID = sqlDB.createSubreddit(subredditName)
 
+        count = 0
         for commentTuple in tempList:
+            count += 1
+            if (count % 1000 == 0):
+                print('moved thourhg 1000 comments')
             if(not sqlDB.doesCommentExist(commentTuple[2])):
                 if(not sqlDB.doesSubmissionExist(commentTuple[1])):
                     submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])  
@@ -82,7 +87,9 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
     
 
 def main():
-    tempDict = setupConfig()
+    tempDict = setupConfig() #get login info
+
+    #create reddit connection
     redditInstance = praw.Reddit(client_id=tempDict['client_id'],
                                    client_secret=tempDict['client_secret'],
                                    password=tempDict['password'],
@@ -105,7 +112,7 @@ def main():
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
     
     
-    getAndStoreSubreddits(myInst, sqlConnection, listOfSubs, 10)
+    getAndStoreSubreddits(myInst, sqlConnection, listOfSubs, 5)
 
     sqlConnection.getSubredditTable()
 

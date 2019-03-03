@@ -28,6 +28,7 @@ class InfoFetch():
         retList = []
         for i in inSubredditList:
             retList += self.getCommentsFromSubreddit(i, submissionLimit)
+            print('we comments from: ', i)
 
         return retList
 
@@ -41,23 +42,23 @@ class InfoFetch():
 
         will fetch from a subreddit all the comments of the top posts.
         '''
+        print('we are starting to fetch comments from:', inSubreddit)
 
         if(not self.sqlConnection.doesSubredditExist(inSubreddit)):
             retList = []
             tempList = []
-            try:
-                self.sqlConnection.addSubreddit(inSubreddit) 
-                subreddit = self.redditInstance.subreddit(inSubreddit)
-                subList = [submission.id for submission in subreddit.top(limit=submissionLimit)]
-                for i in subList:
-                    tempList += self.getSubmissionComments(i)
-            except:
-                print('Something went wrong in getCommentsFromSubreddit()')
+
+            self.sqlConnection.addSubreddit(inSubreddit) 
+            subreddit = self.redditInstance.subreddit(inSubreddit)
+            subList = [submission.id for submission in subreddit.top(limit=submissionLimit)]
+            for i in subList:
+                tempList += self.getSubmissionComments(i)
 
             for i in tempList:
                 retList.append((inSubreddit,) + i)
 
             return retList
+        return []
     
 
     def getSubmissionComments(self, submissionID):
@@ -69,6 +70,8 @@ class InfoFetch():
 
         will fetch and store all the comments from a specified post.
         '''
+        print('starting to fetch comments from submission: ', submissionID)
+
         tempStr = 'https://api.pushshift.io/reddit/submission/comment_ids/' + submissionID
         r = requests.get(tempStr)
         j = r.json() 
@@ -88,7 +91,7 @@ class InfoFetch():
             tempStr = 'https://api.pushshift.io/reddit/comment/search?ids=' + ','.join(commentIds[1000*(i+1):len(commentIds)])
             r = requests.get(tempStr)
             j = r.json()
-            zipList = list(zip([submissionID for i in range(len(commentIds%1000))], commentIds[1000*(i+1):len(commentIds)], [i['body'] for i in j['data']]))
+            zipList = list(zip([submissionID for i in range(len(commentIds)%1000)], commentIds[1000*(i+1):len(commentIds)], [i['body'] for i in j['data']]))
             retList += zipList
             time.sleep(.3)
         else:

@@ -61,7 +61,7 @@ class RedditSQL:
                             comment_reddit_id TEXT,
                             body TEXT,
                             pared_body TEXT,
-                            sentiment TEXT;
+                            sentiment TEXT);
                             '''
             self.crsr.execute(sql_command)
 
@@ -245,15 +245,16 @@ class RedditSQL:
 
         will create a submission and return its SQL ID
         '''
-        sql_command = '''INSERT INTO submissions
-                            body TEXT,
+        sql_command = '''INSERT INTO comments
                          (subreddit_sql_id, submission_sql_id, comment_reddit_id, body)
-                         VALUES ({0}, {1}, "{2}", "{3}")
-                         '''.format(subredditSQLID, submissionSQLID, commentRedditID, commentBody)
-        self.crsr.execute(sql_command)
+                         VALUES (?, ?, ?, ?)
+                         '''
+        #print(sql_command)
+        #print((subredditSQLID, submissionSQLID, commentRedditID, commentBody))
+        self.crsr.execute(sql_command, (subredditSQLID, submissionSQLID, commentRedditID, commentBody))
         self.connection.commit()
 
-        return self.getSubmissionSQLID(commentRedditID)
+        return self.getCommentSQLID(commentRedditID)
 
     def getCommentSQLID(self, commentRedditID):
         '''
