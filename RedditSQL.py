@@ -148,7 +148,7 @@ class RedditSQL:
         self.crsr.execute(sql_command)
         self.connection.commit()
 
-        return self.getSubredditSQLID(subredditName)
+        return self.crsr.lastrowid
 
     def getSubredditSQLID(self, subredditName):
         '''
@@ -199,7 +199,7 @@ class RedditSQL:
         self.crsr.execute(sql_command)
         self.connection.commit()
 
-        return self.getSubmissionSQLID(submissionRedditID)
+        return self.crsr.lastrowid
 
     def getSubmissionSQLID(self, submissionRedditID):
         '''
@@ -254,7 +254,7 @@ class RedditSQL:
         self.crsr.execute(sql_command, (subredditSQLID, submissionSQLID, commentRedditID, commentBody))
         self.connection.commit()
 
-        return self.getCommentSQLID(commentRedditID)
+        return self.crsr.lastrowid
 
     def getCommentSQLID(self, commentRedditID):
         '''

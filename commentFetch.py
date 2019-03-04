@@ -48,7 +48,6 @@ class InfoFetch():
             retList = []
             tempList = []
 
-            self.sqlConnection.addSubreddit(inSubreddit) 
             subreddit = self.redditInstance.subreddit(inSubreddit)
             subList = [submission.id for submission in subreddit.top(limit=submissionLimit)]
             for i in subList:
@@ -78,8 +77,9 @@ class InfoFetch():
         commentIds = j["data"]
         time.sleep(.3)
 
+        retList = []
+
         if len(commentIds) > 1000:
-            retList = []
             loops = len(commentIds) // 1000
             for i in range(loops):
                 tempStr = 'https://api.pushshift.io/reddit/comment/search?ids=' + ','.join(commentIds[1000*i:1000*(i+1)])

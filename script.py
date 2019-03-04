@@ -35,6 +35,38 @@ def setupConfig():
 
     return myConfigDict
 
+def initialSubredditsSetup(commentFetcher, sqlDB, subredditList, submissionLimit = 100):
+    for subredditName in subredditList:
+        initialSubredditSetup(commentFetcher, sqlDB, subredditName, submissionLimit)
+
+def initialSubredditSetup(commentFetcher, sqlDB, subredditName, submissionLimit = 100):
+    '''
+    this function assumes that we are starting with a fresh database. That no other data exists.
+    Thus we don't have to check if a comment is already there.
+
+    We also make use of the fact that our comments grouped by their submission in the tempList
+    '''
+    #add subreddit
+    tempList = commentFetcher.getCommentsFromSubreddit(subredditName, submissionLimit)
+    subredditSQLID = sqlDB.createSubreddit(subredditName)
+
+    lastSubmissionRedditID = ''
+    lastSubmissionSQLID = -1
+    count = 0
+
+    for commentTuple in tempList:
+        count += 1
+        if (count % 1000 == 0):
+            print('moved thourhg 1000 comments')
+
+        if(commentTuple[1] != lastSubmissionRedditID):
+            lastSubmissionRedditID = commentTuple[1]
+            lastSubmissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])
+
+        sqlDB.createComment(subredditSQLID, lastSubmissionSQLID, commentTuple[2], commentTuple[3])
+
+
+
 
 def getAndStoreSubreddits(commentFetcher, sqlDB, subredditList, submissionLimit = 100):
     '''
@@ -72,16 +104,16 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
         subredditSQLID = sqlDB.createSubreddit(subredditName)
 
         count = 0
-        for commentTuple in tempList:
+        for commentTuple in tempList: 
             count += 1
             if (count % 1000 == 0):
                 print('moved thourhg 1000 comments')
-            if(not sqlDB.doesCommentExist(commentTuple[2])):
-                if(not sqlDB.doesSubmissionExist(commentTuple[1])):
-                    submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])  
+            if(not sqlDB.doesCommentExist(commentTuple[2])):                                                 #
+                if(not sqlDB.doesSubmissionExist(commentTuple[1])):                                          #
+                    submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])                #  
                 else:
-                    submissionSQLID = sqlDB.getSubmissionSQLID(commentTuple[1])
-                sqlDB.createComment(subredditSQLID, submissionSQLID, commentTuple[2], commentTuple[3])
+                    submissionSQLID = sqlDB.getSubmissionSQLID(commentTuple[1])                              #
+                sqlDB.createComment(subredditSQLID, submissionSQLID, commentTuple[2], commentTuple[3])       #
 
 
     
@@ -105,14 +137,14 @@ def main():
                   'television','mildlyinteresting','LifeProTips','Showerthoughts','space','DIY','Jokes','gadgets','nottheonion','sports',
                   'tifu','food','photoshopbattles','Documentaries','Futurology','history','InternetIsBeautiful','dataisbeautiful','UpliftingNews','listentothis',
                   'GetMotivated','personalfinance','OldSchoolCool','philosophy','Art','nosleep','WritingPrompts','creepy','TwoXChromosomes','Fitness',
-                  'technology','WTF','bestof','AdviceAnimals','politics','athesim','interestingasfuck','europe','woahdude','BlackPeopleTwitter',
+                  'technology','WTF','bestof','AdviceAnimals','politics','atheism','interestingasfuck','europe','woahdude','BlackPeopleTwitter',
                   'oddlysatisfying','gonewild','leagueoflegends','pcmasterrace','reactiongifs','gameofthrones','wholesomememes','Unexpected','Overwatch','facepalm',
                   'trees','Android','lifehacks','me_irl','relationships','Games','nba','programming','tattoos','NatureIsFuckingLit',
                   'Whatcouldgowrong','CrappyDesign','Dankmemes','nsfw','cringepics','4chan','soccer','comics','sex','pokemon',
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
     
     
-    getAndStoreSubreddits(myInst, sqlConnection, listOfSubs, 5)
+    initialSubredditsSetup(myInst, sqlConnection, listOfSubs, 5)
 
     sqlConnection.getSubredditTable()
 
