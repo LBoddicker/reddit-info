@@ -3,7 +3,7 @@ import json
 import commentFetch
 import RedditSQL
 import praw
-#from commentParse import ParseComments
+import commentParse
 #from analyzeComments import *
 import sys
 
@@ -107,7 +107,7 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
         for commentTuple in tempList: 
             count += 1
             if (count % 1000 == 0):
-                print('moved thourhg 1000 comments')
+                print('moved through 1000 comments')
             if(not sqlDB.doesCommentExist(commentTuple[2])):                                                 #
                 if(not sqlDB.doesSubmissionExist(commentTuple[1])):                                          #
                     submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])                #  
@@ -115,8 +115,19 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
                     submissionSQLID = sqlDB.getSubmissionSQLID(commentTuple[1])                              #
                 sqlDB.createComment(subredditSQLID, submissionSQLID, commentTuple[2], commentTuple[3])       #
 
-
+def initialParseAllComments(sqlDB):
     
+    count = 0
+    for i in range(sqlDB.getLengthOfTable('comments')):
+
+        count += 1
+        if(count % 1000 == 0):
+            print('moved through 1000 comments')
+
+        tempStr = sqlDB.getCommentByID(i+1)[4]
+        tempStr = commentParse.totParse(tempStr)
+        sqlDB.storeParsedComment(i, tempStr)
+
 
 def main():
     tempDict = setupConfig() #get login info
@@ -144,7 +155,9 @@ def main():
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
     
     
-    initialSubredditsSetup(myInst, sqlConnection, listOfSubs, 5)
+    #initialSubredditsSetup(myInst, sqlConnection, listOfSubs, 10)
+
+    initialParseAllComments(sqlConnection)
 
     sqlConnection.getSubredditTable()
 

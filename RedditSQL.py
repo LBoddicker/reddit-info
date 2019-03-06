@@ -53,6 +53,7 @@ class RedditSQL:
                             '''
             self.crsr.execute(sql_command)
 
+        ##TODO: should be parsed_body NOT pared_body
         if(not self.doesTableExist('comments')):
             sql_command = '''CREATE TABLE comments 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -271,9 +272,42 @@ class RedditSQL:
         self.crsr.execute(sql_command)
         return self.crsr.fetchone()[0]
 
+    def getLengthOfTable(self, tableName):
+        '''
+        tableName - string
+        output - int
+        '''
+        #NOTE: tables can not be the target of parameter substitutaion
+        #right now this can be injected with something bad :(
+        #should fix in the future
+        sql_command = '''SELECT COUNT(*)
+                         FROM {0}
+                         '''.format(tableName)
+        self.crsr.execute(sql_command)
+        return self.crsr.fetchone()[0]
 
+    def getCommentByID(self, commentID):
+        '''
+        commentID - the SQL comment ID
+        output - tuple of the comment -- (id, subreddit_sql_id, submission_sql_id, comment_reddit_id, body, pared_body, sentiment)
+        '''
+        #TODO: fix parsed body spelling
 
+        sql_command = '''SELECT *
+                         FROM comments
+                         WHERE
+                         id = ?
+                         '''
+        self.crsr.execute(sql_command, (commentID,))
+        return self.crsr.fetchone()
 
+    def storeParsedComment(self, commentID, parsedCommentBody):
+        sql_command = '''UPDATE comments
+                         SET (pared_body) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (parsedCommentBody, commentID))
+        self.connection.commit()
 
     def closeDB(self):
         '''
