@@ -40,7 +40,8 @@ class RedditSQL:
             sql_command = '''CREATE TABLE subreddits 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
                             name TEXT,
-                            sentiment TEXT);
+                            sentiment TEXT,
+                            reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
 
@@ -49,7 +50,8 @@ class RedditSQL:
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
                             subreddit_sql_id INTEGER,
                             submission_reddit_id TEXT,
-                            sentiment TEXT);
+                            sentiment TEXT,
+                            reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
 
@@ -62,7 +64,8 @@ class RedditSQL:
                             comment_reddit_id TEXT,
                             body TEXT,
                             pared_body TEXT,
-                            sentiment TEXT);
+                            sentiment TEXT,
+                            reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
 
@@ -71,6 +74,21 @@ class RedditSQL:
     def getSubredditTable(self):
         sql_command = '''SELECT * 
                          FROM subreddits'''
+        self.crsr.execute(sql_command)
+        for row in self.crsr:
+            print(row)
+
+
+    def getSubmissionTable(self):
+        sql_command = '''SELECT * 
+                         FROM submissions'''
+        self.crsr.execute(sql_command)
+        for row in self.crsr:
+            print(row)
+
+    def getCommentTable(self):
+        sql_command = '''SELECT * 
+                         FROM comments'''
         self.crsr.execute(sql_command)
         for row in self.crsr:
             print(row)
@@ -250,8 +268,6 @@ class RedditSQL:
                          (subreddit_sql_id, submission_sql_id, comment_reddit_id, body)
                          VALUES (?, ?, ?, ?)
                          '''
-        #print(sql_command)
-        #print((subredditSQLID, submissionSQLID, commentRedditID, commentBody))
         self.crsr.execute(sql_command, (subredditSQLID, submissionSQLID, commentRedditID, commentBody))
         self.connection.commit()
 
@@ -307,6 +323,42 @@ class RedditSQL:
                          WHERE id = ?
                          '''
         self.crsr.execute(sql_command, (parsedCommentBody, commentID))
+        self.connection.commit()
+
+    def updateSubmissionReadingScore(self, submissionID, score):
+        '''
+        submissionID - int
+        score - float
+        '''
+        sql_command = '''UPDATE submissions
+                         SET (reading_score) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, submissionID))
+        self.connection.commit()
+
+    def updateSubredditReadingScore(self, subredditID, score):
+        '''
+        subredditID - int
+        score - float
+        '''
+        sql_command = '''UPDATE subreddits
+                         SET (reading_score) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, subredditID))
+        self.connection.commit()
+
+    def updateCommentReadingScore(self, commentID, score):
+        '''
+        commentID - int
+        score - float
+        '''
+        sql_command = '''UPDATE comments
+                         SET (reading_score) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, commentID))
         self.connection.commit()
 
     def closeDB(self):

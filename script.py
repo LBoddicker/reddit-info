@@ -4,7 +4,7 @@ import commentFetch
 import RedditSQL
 import praw
 import commentParse
-#from analyzeComments import *
+import analyzeComments
 import sys
 
 # New rules/ideas
@@ -107,7 +107,7 @@ def getAndStoreSubreddit(commentFetcher, sqlDB, subredditName, submissionLimit =
         for commentTuple in tempList: 
             count += 1
             if (count % 1000 == 0):
-                print('moved through 1000 comments')
+                print('getAndStore - moved through 1000 comments')
             if(not sqlDB.doesCommentExist(commentTuple[2])):                                                 #
                 if(not sqlDB.doesSubmissionExist(commentTuple[1])):                                          #
                     submissionSQLID = sqlDB.createSubmission(subredditSQLID, commentTuple[1])                #  
@@ -122,11 +122,61 @@ def initialParseAllComments(sqlDB):
 
         count += 1
         if(count % 1000 == 0):
-            print('moved through 1000 comments')
+            print('parse - moved through 1000 comments')
 
         tempStr = sqlDB.getCommentByID(i+1)[4]
         tempStr = commentParse.totParse(tempStr)
-        sqlDB.storeParsedComment(i, tempStr)
+        sqlDB.storeParsedComment(i+1, tempStr)
+
+
+def initialAnalyze(sqlDB):
+    lastSubredditID = sqlDB.getCommentByID(1)[1]
+    lastSubmissionID = sqlDB.getCommentByID(1)[2]
+
+    lastCommentCount = 0                #number of comments in a submission
+    lastSubmissionCount = 0             #number of submissions in a subreddit
+
+    runningCommentScore = 0             #sum score of all comments in a submission 
+    runningSubmissionScore = 0          #sum score of all submissions in a subreddit
+
+    print('we are analyzing comments')
+    count = 0
+
+    tableLength = sqlDB.getLengthOfTable('comments')
+
+    for i in range(tableLength):
+        count += 1
+        if(count % 1000 == 0):
+            print('analyze - moved through 1000 comments')
+
+        commentTuple = sqlDB.getCommentByID(i+1)
+        #print(commentTuple)
+
+        if(lastSubmissionID != commentTuple[2] or i == tableLength-1):
+            newSubmissionScore = (runningCommentScore / lastCommentCount)
+            sqlDB.updateSubmissionReadingScore(lastSubmissionID, newSubmissionScore)
+
+            runningSubmissionScore += newSubmissionScore
+            lastSubmissionCount += 1
+
+            lastCommentCount = 0
+            runningCommentScore = 0
+        
+        #if this gets triggered then the above must have also been triggered
+        if(lastSubredditID != commentTuple[1] or i == tableLength-1): 
+            newSubredditScore = runningSubmissionScore / lastSubmissionCount
+            sqlDB.updateSubredditReadingScore(lastSubredditID, newSubredditScore)
+
+            runningSubmissionScore = 0
+            lastSubmissionCount = 0
+
+        newCommentScore = analyzeComments.getReadingScore(commentTuple[4])
+        sqlDB.updateCommentReadingScore(i+1, newCommentScore)
+
+        lastCommentCount += 1
+        runningCommentScore += newCommentScore
+        lastSubredditID = commentTuple[1]
+        lastSubmissionID = commentTuple[2]
 
 
 def main():
@@ -139,9 +189,9 @@ def main():
                                    user_agent=tempDict['user_agent'],
                                    username=tempDict['username'])
 
-    sqlConnection = RedditSQL.RedditSQL(DB_NAME) #create SQL interface object
+    sqlDB = RedditSQL.RedditSQL(DB_NAME) #create SQL interface object
 
-    myInst = commentFetch.InfoFetch(redditInstance, sqlConnection) #create comment grabber object
+    myInst = commentFetch.InfoFetch(redditInstance, sqlDB) #create comment grabber object
 
     listOfSubs = ['announcements', 'funny', 'AskReddit', 'todayilearned', 'science', 'worldnews', 'pics', 'IAmA', 'gaming', 'videos',
                   'movies', 'aww', 'Music', 'blog','gifs','news','explainlikeimfive','askscience','EarthPorn','books',
@@ -153,13 +203,25 @@ def main():
                   'trees','Android','lifehacks','me_irl','relationships','Games','nba','programming','tattoos','NatureIsFuckingLit',
                   'Whatcouldgowrong','CrappyDesign','Dankmemes','nsfw','cringepics','4chan','soccer','comics','sex','pokemon',
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
+
+    testListOfSubs = ['announcements', 'funny', 'AskReddit']
     
     
-    #initialSubredditsSetup(myInst, sqlConnection, listOfSubs, 10)
+    initialSubredditsSetup(myInst, sqlDB, testListOfSubs, 2)
 
-    initialParseAllComments(sqlConnection)
+    initialParseAllComments(sqlDB)
 
-    sqlConnection.getSubredditTable()
+    initialAnalyze(sqlDB)
+
+    #sqlDB.getCommentTable()
+
+    sqlDB.getSubredditTable()
+
+    sqlDB.getSubmissionTable()
+
+    sqlDB.closeDB()
+
+    
 
 if __name__ == '__main__':
     print(sys.argv)

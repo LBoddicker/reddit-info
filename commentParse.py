@@ -42,6 +42,6 @@ def totParse(inStr):
     tempStr = removePunc(tempStr)
     tempStr = toLowerCase(tempStr)
     if (len(tempStr) == 0):
-        return None
+        return '' #empty string
     else:
         return tempStr
