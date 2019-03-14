@@ -5,6 +5,7 @@ import RedditSQL
 import praw
 import commentParse
 import analyzeComments
+import commentDisplay
 import sys
 
 # New rules/ideas
@@ -178,6 +179,22 @@ def initialAnalyze(sqlDB):
         lastSubredditID = commentTuple[1]
         lastSubmissionID = commentTuple[2]
 
+def displayData(sqlDB):
+    #need to create a tuple of subreddit names
+    #need to create a list of reading scores
+
+    tableLength = sqlDB.getLengthOfTable('subreddits')
+
+    subredditNameList = []
+    scoreList = []
+
+    for i in range(tableLength):
+        subredditTuple = sqlDB.getSubredditByID(i+1)
+        subredditNameList.append(subredditTuple[1])
+        scoreList.append(subredditTuple[3])
+
+    commentDisplay.plotSubredditsReadingScore(tuple(subredditNameList), scoreList)
+
 
 def main():
     tempDict = setupConfig() #get login info
@@ -204,20 +221,23 @@ def main():
                   'Whatcouldgowrong','CrappyDesign','Dankmemes','nsfw','cringepics','4chan','soccer','comics','sex','pokemon',
                   'malefashionadvice','NSFW_GIF','StarWars','Frugal','HistoryPorn','AnimalsBeingJerks','RealGirls','travel','buildapc','OutOfTheLoop']
 
-    testListOfSubs = ['announcements', 'funny', 'AskReddit']
+    testListOfSubs = ['announcements', 'funny', 'AskReddit', 'todayilearned', 'science', 'worldnews', 'pics', 'IAmA', 'gaming', 'videos',
+                  'movies', 'aww', 'Music', 'blog','gifs','news','explainlikeimfive','askscience','EarthPorn','books']
     
     
-    initialSubredditsSetup(myInst, sqlDB, testListOfSubs, 2)
+    #initialSubredditsSetup(myInst, sqlDB, testListOfSubs, 2)
 
-    initialParseAllComments(sqlDB)
+    #initialParseAllComments(sqlDB)
 
-    initialAnalyze(sqlDB)
+    #initialAnalyze(sqlDB)
 
     #sqlDB.getCommentTable()
 
     sqlDB.getSubredditTable()
 
     sqlDB.getSubmissionTable()
+
+    displayData(sqlDB)
 
     sqlDB.closeDB()
 

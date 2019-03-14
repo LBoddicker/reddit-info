@@ -78,7 +78,6 @@ class RedditSQL:
         for row in self.crsr:
             print(row)
 
-
     def getSubmissionTable(self):
         sql_command = '''SELECT * 
                          FROM submissions'''
@@ -92,6 +91,9 @@ class RedditSQL:
         self.crsr.execute(sql_command)
         for row in self.crsr:
             print(row)
+
+
+    
 
     def addSubreddit(self, subredditName):
         if(not self.doesSubredditExist(subredditName)):
@@ -183,6 +185,21 @@ class RedditSQL:
                       '''.format(subredditName)
         self.crsr.execute(sql_command)
         return self.crsr.fetchone()[0]
+
+    def getSubredditByID(self, subredditID):
+        '''
+        subredditID - the SQL subreddit ID - int
+        output - tuple of the subreddit
+        '''
+        #TODO: fix parsed body spelling
+
+        sql_command = '''SELECT *
+                         FROM subreddits
+                         WHERE
+                         id = ?
+                         '''
+        self.crsr.execute(sql_command, (subredditID,))
+        return self.crsr.fetchone()
 
 
     def doesSubmissionExist(self, submissionRedditID):
