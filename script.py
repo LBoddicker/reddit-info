@@ -58,7 +58,7 @@ def initialSubredditSetup(commentFetcher, sqlDB, subredditName, submissionLimit 
     for commentTuple in tempList:
         count += 1
         if (count % 1000 == 0):
-            print('moved thourhg 1000 comments')
+            print('setup - moved through 1000 comments')
 
         if(commentTuple[1] != lastSubmissionRedditID):
             lastSubmissionRedditID = commentTuple[1]
@@ -134,11 +134,18 @@ def initialAnalyze(sqlDB):
     lastSubredditID = sqlDB.getCommentByID(1)[1]
     lastSubmissionID = sqlDB.getCommentByID(1)[2]
 
-    lastCommentCount = 0                #number of comments in a submission
+    lastReadingCommentCount = 0                #number of comments in a submission
+    lastSentimentCommentCount = 0
     lastSubmissionCount = 0             #number of submissions in a subreddit
 
-    runningCommentScore = 0             #sum score of all comments in a submission 
+    runningCommentScore = 0             #sum score of all comments in a submission
+    runningCommentPolarity = 0
+    runningCommentSubjectivity = 0
     runningSubmissionScore = 0          #sum score of all submissions in a subreddit
+    runningSubmissionPolarity = 0
+    runningSubmissionSubjectivity = 0
+
+    
 
     print('we are analyzing comments')
     count = 0
@@ -154,30 +161,60 @@ def initialAnalyze(sqlDB):
         #print(commentTuple)
 
         if(lastSubmissionID != commentTuple[2] or i == tableLength-1):
-            newSubmissionScore = (runningCommentScore / lastCommentCount)
-            sqlDB.updateSubmissionReadingScore(lastSubmissionID, newSubmissionScore)
+            newSubmissionScore = (runningCommentScore / lastReadingCommentCount)
+            newSubmissionPolarity = (runningCommentPolarity / lastSentimentCommentCount)
+            newSubmissionSubjectivity = (runningCommentSubjectivity / lastSentimentCommentCount)
 
-            runningSubmissionScore += newSubmissionScore
+            sqlDB.updateSubmissionReadingScore(lastSubmissionID, newSubmissionScore)
+            sqlDB.updateSubmissionPolarity(lastSubmissionID, newSubmissionPolarity)
+            sqlDB.updateSubmissionSubjectivity(lastSubmissionID, newSubmissionSubjectivity)
+
             lastSubmissionCount += 1
 
-            lastCommentCount = 0
+            runningSubmissionScore += newSubmissionScore
+            runningSubmissionPolarity += newSubmissionPolarity
+            runningSubmissionSubjectivity += newSubmissionSubjectivity
+
+            lastReadingCommentCount = 0
+            lastSentimentCommentCount = 0
             runningCommentScore = 0
+            runningCommentPolarity = 0
+            runningCommentSubjectivity = 0
         
         #if this gets triggered then the above must have also been triggered
         if(lastSubredditID != commentTuple[1] or i == tableLength-1): 
             newSubredditScore = runningSubmissionScore / lastSubmissionCount
+            newSubredditPolarity = (runningSubmissionPolarity / lastSubmissionCount)
+            newSubredditSubjectivity = (runningSubmissionSubjectivity / lastSubmissionCount)
+
             sqlDB.updateSubredditReadingScore(lastSubredditID, newSubredditScore)
+            sqlDB.updateSubredditPolarity(lastSubredditID, newSubredditPolarity)
+            sqlDB.updateSubredditSubjectivity(lastSubredditID, newSubredditSubjectivity)
 
             runningSubmissionScore = 0
+            runningSubmissionPolarity = 0
+            runningSubmissionSubjectivity = 0
             lastSubmissionCount = 0
 
         newCommentScore = analyzeComments.getReadingScore(commentTuple[4])
-        sqlDB.updateCommentReadingScore(i+1, newCommentScore)
+        newCommentPolarity, newCommentSubjectivity = analyzeComments.getSentiment(commentTuple[4])
 
-        lastCommentCount += 1
-        runningCommentScore += newCommentScore
+        sqlDB.updateCommentReadingScore(i+1, newCommentScore)
+        sqlDB.updateCommentSubjectivity(i+1, newCommentSubjectivity)
+        sqlDB.updateCommentPolarity(i+1, newCommentPolarity)
+
+        if(not commentParse.isBannedWord(commentTuple[4])):
+            if(newCommentScore <= 20):
+                runningCommentScore += newCommentScore
+                lastReadingCommentCount += 1
+
+            runningCommentPolarity += newCommentPolarity
+            runningCommentSubjectivity += newCommentSubjectivity
+            lastSentimentCommentCount += 1
+
         lastSubredditID = commentTuple[1]
         lastSubmissionID = commentTuple[2]
+
 
 def displayData(sqlDB):
     #need to create a tuple of subreddit names
@@ -186,14 +223,21 @@ def displayData(sqlDB):
     tableLength = sqlDB.getLengthOfTable('subreddits')
 
     subredditNameList = []
-    scoreList = []
+    readingScoreList = []
+    polarityList = []
+    subjectivityList = []
 
     for i in range(tableLength):
         subredditTuple = sqlDB.getSubredditByID(i+1)
         subredditNameList.append(subredditTuple[1])
-        scoreList.append(subredditTuple[3])
+        readingScoreList.append(subredditTuple[4])
+        polarityList.append(subredditTuple[2])
+        subjectivityList.append(subredditTuple[3])
 
-    commentDisplay.plotSubredditsReadingScore(tuple(subredditNameList), scoreList)
+    commentDisplay.plotSubredditReadingScore(subredditNameList, readingScoreList)
+    commentDisplay.plotSubredditPolarity(subredditNameList, polarityList)
+    commentDisplay.plotSubredditSubjectivity(subredditNameList, subjectivityList)
+
 
 
 def main():
@@ -225,13 +269,11 @@ def main():
                   'movies', 'aww', 'Music', 'blog','gifs','news','explainlikeimfive','askscience','EarthPorn','books']
     
     
-    #initialSubredditsSetup(myInst, sqlDB, testListOfSubs, 2)
+    initialSubredditsSetup(myInst, sqlDB, listOfSubs, 5)
 
-    #initialParseAllComments(sqlDB)
+    initialParseAllComments(sqlDB)
 
-    #initialAnalyze(sqlDB)
-
-    #sqlDB.getCommentTable()
+    initialAnalyze(sqlDB)
 
     sqlDB.getSubredditTable()
 

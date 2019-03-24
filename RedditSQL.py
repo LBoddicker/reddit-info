@@ -40,7 +40,8 @@ class RedditSQL:
             sql_command = '''CREATE TABLE subreddits 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
                             name TEXT,
-                            sentiment TEXT,
+                            sentiment_polarity REAL,
+                            sentiment_subjectivity REAL,
                             reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
@@ -50,12 +51,12 @@ class RedditSQL:
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
                             subreddit_sql_id INTEGER,
                             submission_reddit_id TEXT,
-                            sentiment TEXT,
+                            sentiment_polarity REAL,
+                            sentiment_subjectivity REAL,
                             reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
 
-        ##TODO: should be parsed_body NOT pared_body
         if(not self.doesTableExist('comments')):
             sql_command = '''CREATE TABLE comments 
                             (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,8 +64,9 @@ class RedditSQL:
                             submission_sql_id INTEGER,
                             comment_reddit_id TEXT,
                             body TEXT,
-                            pared_body TEXT,
-                            sentiment TEXT,
+                            parsed_body TEXT,
+                            sentiment_polarity REAL,
+                            sentiment_subjectivity REAL,
                             reading_score REAL);
                             '''
             self.crsr.execute(sql_command)
@@ -244,6 +246,7 @@ class RedditSQL:
 
         will return the SQL ID
         '''
+
         sql_command = '''
                       SELECT id
                       FROM submissions
@@ -322,7 +325,7 @@ class RedditSQL:
     def getCommentByID(self, commentID):
         '''
         commentID - the SQL comment ID
-        output - tuple of the comment -- (id, subreddit_sql_id, submission_sql_id, comment_reddit_id, body, pared_body, sentiment)
+        output - tuple of the comment -- (id, subreddit_sql_id, submission_sql_id, comment_reddit_id, body, parsed_body, sentiment)
         '''
         #TODO: fix parsed body spelling
 
@@ -336,7 +339,7 @@ class RedditSQL:
 
     def storeParsedComment(self, commentID, parsedCommentBody):
         sql_command = '''UPDATE comments
-                         SET (pared_body) = ?
+                         SET (parsed_body) = ?
                          WHERE id = ?
                          '''
         self.crsr.execute(sql_command, (parsedCommentBody, commentID))
@@ -378,6 +381,93 @@ class RedditSQL:
         self.crsr.execute(sql_command, (score, commentID))
         self.connection.commit()
 
+    def updateSubredditPolarity(self, subredditID, score):
+        '''
+        subredditID - int
+        score - float
+        '''
+        sql_command = '''UPDATE subreddits
+                         SET (sentiment_polarity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, subredditID))
+        self.connection.commit()
+        
+    def updateSubredditSubjectivity(self, subredditID, score):
+        '''
+        subredditID - int
+        score - float
+        '''
+        sql_command = '''UPDATE subreddits
+                         SET (sentiment_subjectivity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, subredditID))
+        self.connection.commit() 
+
+    def updateSubmissionPolarity(self, submissionID, score):
+        '''
+        submissionID - int
+        score - float
+        '''
+        sql_command = '''UPDATE submissions
+                         SET (sentiment_polarity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, submissionID))
+        self.connection.commit()
+        
+    def updateSubmissionSubjectivity(self, submissionID, score):
+        '''
+        submissionID - int
+        score - float
+        '''
+        sql_command = '''UPDATE submissions
+                         SET (sentiment_subjectivity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, submissionID))
+        self.connection.commit() 
+
+    def updateCommentPolarity(self, commentID, score):
+        '''
+        commentID - int
+        score - float
+        '''
+        sql_command = '''UPDATE comments
+                         SET (sentiment_polarity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, commentID))
+        self.connection.commit()
+        
+    def updateCommentSubjectivity(self, commentID, score):
+        '''
+        commentID - int
+        score - float
+        '''
+        sql_command = '''UPDATE comments
+                         SET (sentiment_subjectivity) = ?
+                         WHERE id = ?
+                         '''
+        self.crsr.execute(sql_command, (score, commentID))
+        self.connection.commit()
+
+    def displayTopCommentsBySubmission(self, submissionID, num):
+        sql_command = '''SELECT *
+                         FROM comments
+                         WHERE submission_sql_id = ?
+                         ORDER BY reading_score DESC
+                         LIMIT ?
+                         '''
+        self.crsr.execute(sql_command, (submissionID, num))
+        
+        rows = self.crsr.fetchall()
+        for row in rows:
+            print(row)
+        
+        return rows
+
     def closeDB(self):
         '''
         closes connection to the database
@@ -394,4 +484,3 @@ if __name__ == '__main__':
     myObj.doesSubredditExist('pics')
     myObj.doesSubredditExist('blah')
     myObj.closeDB()
-

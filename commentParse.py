@@ -35,6 +35,12 @@ def bannedWordFilter(inStr):
     else:
         return inStr
 
+def isBannedWord(inStr):
+    if(inStr == '[removed]' or inStr == '[deleted]'):
+        return True
+    else:
+        return False
+
 def totParse(inStr):
     tempStr = emojiReplace(inStr)
     tempStr = bannedWordFilter(tempStr)
